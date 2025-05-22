@@ -1,8 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\BuildSettings.Common.props" />
   <Import Project="..\BuildSettings.Koikatu.props" />
+  <PropertyGroup>
+    <AssemblyName>RealPOV.Koikatu.VRfix</AssemblyName>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="IllusionModdingAPI.KKAPI" Version="1.37.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="KKAPI">
+      <HintPath>I:\Erogame\Koikatu\BepInEx\plugins\KKAPI.dll</HintPath>
+    </Reference>
+    <Reference Include="KKCharaStudioVRPlugin">
+      <HintPath>I:\Erogame\Koikatu\BepInEx\KKCharaStudioVRPlugin.dll</HintPath>
+    </Reference>
+    <Reference Include="VRGIN_KKCS">
+      <HintPath>I:\Erogame\Koikatu\BepInEx\VRGIN_KKCS.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <Import Project="..\Common.Core\Common.Core.projitems" Label="Shared" />
   <Import Project="..\RealPOV.Core\RealPOV.Core.projitems" Label="Shared" />

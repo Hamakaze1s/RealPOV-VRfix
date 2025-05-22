@@ -8,13 +8,14 @@ namespace RealPOV.Core
 {
     public abstract class RealPOVCore : BaseUnityPlugin
     {
-        public const string GUID = "keelhauled.realpov";
-        public const string PluginName = "RealPOV";
+        public const string GUID = "hamakaze1s.realpov.vrfix"; // Fork from "keelhauled.realpov"
+        public const string PluginName = "RealPOV VR Fix";
 
         protected const string SECTION_GENERAL = "General";
         protected const string SECTION_HOTKEYS = "Keyboard shortcuts";
 
         internal static ConfigEntry<float> ViewOffset { get; set; }
+        internal static ConfigEntry<float> VRViewOffset { get; set; }
         internal static ConfigEntry<float> DefaultFOV { get; set; }
         internal static ConfigEntry<float> MouseSens { get; set; }
         internal static ConfigEntry<KeyboardShortcut> POVHotkey { get; set; }
@@ -24,14 +25,21 @@ namespace RealPOV.Core
         protected static readonly Dictionary<GameObject, Vector3> LookRotation = new Dictionary<GameObject, Vector3>();
         protected static GameObject currentCharaGo;
         protected static Camera GameCamera;
-        protected static float defaultViewOffset = 0.03f;
+        protected static float defaultViewOffset = 0.05f;
+        protected static float defaultVRViewOffset = 0.01f;
         protected static float defaultFov = 70f;
 
         private static float backupFOV;
         private static float backupNearClip;
-        private static bool allowCamera;
-        private bool mouseButtonDown0;
-        private bool mouseButtonDown1;
+        private static bool allowCamera; // Controls if mouse input is processed for camera control
+        private bool mouseButtonDown0; // Left mouse button state
+        private bool mouseButtonDown1; // Right mouse button state
+
+        // IsVREnabled() will be overridden in RealPOV.Koikatu
+        protected virtual bool IsVREnabled()
+        {
+            return false;
+        }
 
         protected virtual void Awake()
         {
@@ -41,91 +49,118 @@ namespace RealPOV.Core
             DefaultFOV = Config.Bind(SECTION_GENERAL, "Default FOV", defaultFov, new ConfigDescription("", new AcceptableValueRange<float>(20f, 120f)));
             MouseSens = Config.Bind(SECTION_GENERAL, "Mouse sensitivity", 1f, new ConfigDescription("", new AcceptableValueRange<float>(0.1f, 2f)));
             ViewOffset = Config.Bind(SECTION_GENERAL, "View offset", defaultViewOffset, new ConfigDescription("Move the camera backward or forward", new AcceptableValueRange<float>(-0.5f, 0.5f)));
+            VRViewOffset = Config.Bind(SECTION_GENERAL, "VR View offset", defaultVRViewOffset, new ConfigDescription("Move the VR camera backward or forward", new AcceptableValueRange<float>(-0.5f, 0.5f)));
         }
 
         private void Update()
         {
-            if(POVHotkey.Value.IsDown())
+            if (POVHotkey.Value.IsDown())
             {
-                if(POVEnabled)
+                if (POVEnabled)
                     DisablePov();
                 else
                     EnablePov();
             }
         }
-        
+
         private void LateUpdate()
         {
-            if(POVEnabled)
+            if (POVEnabled)
             {
-                if(!allowCamera)
+                // In VR, mouse input should not control rotation (it's handled by HMD) or FOV.
+                // It can still be used for UI interaction if needed, but not for camera movements.
+                // We will only allow mouse input for camera/FOV adjustment if NOT in VR mode.
+                if (!IsVREnabled()) // Only allow mouse control if not in VR mode
                 {
-                    if(GUIUtility.hotControl == 0 && !EventSystem.current.IsPointerOverGameObject())
+                    if (!allowCamera)
                     {
-                        if(Input.GetMouseButtonDown(0))
+                        if (GUIUtility.hotControl == 0 && !EventSystem.current.IsPointerOverGameObject())
                         {
-                            mouseButtonDown0 = true;
-                            allowCamera = true;
-                            if(GameCursor.IsInstance())
-                                GameCursor.Instance.SetCursorLock(true);
-                        }
+                            if (Input.GetMouseButtonDown(0))
+                            {
+                                mouseButtonDown0 = true;
+                                allowCamera = true;
+                                if (GameCursor.IsInstance())
+                                    GameCursor.Instance.SetCursorLock(true);
+                            }
 
-                        if(Input.GetMouseButtonDown(1))
+                            if (Input.GetMouseButtonDown(1))
+                            {
+                                mouseButtonDown1 = true;
+                                allowCamera = true;
+                                if (GameCursor.IsInstance())
+                                    GameCursor.Instance.SetCursorLock(true);
+                            }
+                        }
+                    }
+
+                    if (allowCamera)
+                    {
+                        bool mouseUp0 = Input.GetMouseButtonUp(0);
+                        bool mouseUp1 = Input.GetMouseButtonUp(1);
+
+                        if ((mouseButtonDown0 || mouseButtonDown1) && (mouseUp0 || mouseUp1))
                         {
-                            mouseButtonDown1 = true;
-                            allowCamera = true;
-                            if(GameCursor.IsInstance())
-                                GameCursor.Instance.SetCursorLock(true);
+                            if (mouseUp0) mouseButtonDown0 = false;
+                            if (mouseUp1) mouseButtonDown1 = false;
+
+                            if (!mouseButtonDown0 && !mouseButtonDown1)
+                            {
+                                allowCamera = false;
+                                if (GameCursor.IsInstance())
+                                    GameCursor.Instance.SetCursorLock(false);
+                            }
                         }
                     }
                 }
-
-                if(allowCamera)
-                {
-                    bool mouseUp0 = Input.GetMouseButtonUp(0);
-                    bool mouseUp1 = Input.GetMouseButtonUp(1);
-
-                    if((mouseButtonDown0 || mouseButtonDown1) && (mouseUp0 || mouseUp1))
-                    {
-                        if(mouseUp0) mouseButtonDown0 = false;
-                        if(mouseUp1) mouseButtonDown1 = false;
-
-                        if(!mouseButtonDown0 && !mouseButtonDown1)
-                        {
-                            allowCamera = false;
-                            if(GameCursor.IsInstance())
-                                GameCursor.Instance.SetCursorLock(false);
-                        }
-                    }
+                else
+                { // In VR mode, ensure allowCamera is true to permit other plugins/game to interact with UI,
+                  // but RealPOV itself won't process mouse inputs for camera adjustments.
+                  // Also ensure cursor is unlocked by RealPOV.
+                    allowCamera = true;
+                    if (GameCursor.IsInstance())
+                        GameCursor.Instance.SetCursorLock(false);
                 }
 
-                if(allowCamera)
+
+                // --- MODIFIED: Mouse input for rotation and FOV is ONLY processed if allowCamera is true (i.e., not in VR) ---
+                if (allowCamera && !IsVREnabled()) // Only process mouse for camera adjustments if NOT in VR
                 {
-                    if(mouseButtonDown0)
+                    if (mouseButtonDown0) // Mouse Left Button: Character head rotation (non-VR only)
                     {
-                        if(LookRotation.ContainsKey(currentCharaGo))
+                        if (LookRotation.ContainsKey(currentCharaGo))
                         {
                             var x = Input.GetAxis("Mouse X") * MouseSens.Value;
                             var y = -Input.GetAxis("Mouse Y") * MouseSens.Value;
                             LookRotation[currentCharaGo] += new Vector3(y, x, 0f);
                         }
                     }
-                    else if(mouseButtonDown1)
+                    else if (mouseButtonDown1) // Mouse Right Button: FOV adjustment (non-VR only)
                     {
                         CurrentFOV += Input.GetAxis("Mouse X");
                     }
                 }
+                // --- END MODIFIED ---
             }
         }
 
         protected virtual void EnablePov()
         {
             POVEnabled = true;
-            backupFOV = GameCamera.fieldOfView;
-            backupNearClip = GameCamera.nearClipPlane;
 
-            if(CurrentFOV == null)
-                CurrentFOV = DefaultFOV.Value;
+            if (GameCamera != null && !IsVREnabled())
+            {
+                backupFOV = GameCamera.fieldOfView;
+                backupNearClip = GameCamera.nearClipPlane;
+
+                if (CurrentFOV == null)
+                    CurrentFOV = DefaultFOV.Value;
+            }
+            else if (IsVREnabled())
+            {
+                Log.Message("RealPOV: VR enabled. Not touching FOV/NearClipPlane.");
+                CurrentFOV = null;
+            }
         }
 
         protected virtual void DisablePov()
@@ -133,12 +168,19 @@ namespace RealPOV.Core
             currentCharaGo = null;
             POVEnabled = false;
 
-            if(GameCamera != null)
+            if (GameCamera != null)
             {
-                GameCamera.fieldOfView = backupFOV;
-                GameCamera.nearClipPlane = backupNearClip;
+                if (!IsVREnabled())
+                {
+                    GameCamera.fieldOfView = backupFOV;
+                    GameCamera.nearClipPlane = backupNearClip;
+                }
+                else
+                {
+                    Log.Message("RealPOV: VR enabled. Not restoring FOV/NearClipPlane.");
+                }
 
-                if(GameCursor.IsInstance())
+                if (GameCursor.IsInstance())
                     GameCursor.Instance.SetCursorLock(false);
             }
         }

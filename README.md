@@ -1,95 +1,86 @@
-# KeelPlugins
+# RealPOV (Koikatu Studio VR Fix Fork)
 
-Various plugins for Illusion's Unity games like Koikatu, Honey Select, PlayHome and AI Syoujyo.  
-Not all of these plugins exist or are even possible to make for all of the games.  
-Configuration Manager is recommended to make changing the numerous settings from these plugins easier.
+[English] | [中文](#中文)
 
-## How to install
-1. Install the latest build of [BepInEx](https://github.com/BepInEx/BepInEx/releases)
-2. Download the latest release for your game from [the releases page](../../releases)
-3. Plugin dlls go to `bepinex/plugins` and patchers to `bepinex/patchers`
+---
 
-## Plugins
+<span id="english"></span>
 
-#### AltAutoMode [PH]
-An alternative auto mode for H scenes.  
-Edits the full auto mode so you can control the speed of the animation but not the pose.
-There is also some added randomization to make the pose changing feel more natural.
+## RealPOV (Koikatu Studio VR Fix Fork)
 
-#### AnimeAssAssistant [KK][KKS]
-An assistant to help you manage your huge card collections.  
-It provides a few shortcuts in maker that let you go through your cards quickly while deciding which cards to keep.  
-Enable the plugin in the maker sidebar for the hotkeys to work.
+This is a specialized fork of the `RealPOV` plugin from the [KeelPlugins](https://github.com/IllusionMods/KeelPlugins) collection. Its primary purpose is to enhance the first-person experience in a VR environment for **Koikatu Studio**. Currently, only basic functionality is implemented.
 
-#### BetterSceneLoader [KK][KKS][HS]
-An alternative scene loader for Studio.  
-The subfolders of the scene folder will act as categories for your scenes.
+### Features
 
-#### CameraFrameMask [KK][KKS]
-Mask certain ugly frames caused by other plugins during character loading.
+*   **Chara Studio VR First-Person:** Adds first-person functionality for Chara Studio VR mode.
+*   **Familiar Usage:** The core usage remains consistent with the original RealPOV plugin.
+*   **Default Toggle Key:** First-person mode can be toggled by pressing the `Backspace` key by default.
+*   **Independent Camera Offset for Non-VR:** To address clipping issues, this allows you to set a camera position offset in the configuration file that is *independent* of VR mode settings. This provides greater flexibility for non-VR first-person views (if needed).
+*   **Development Environment:** This fork was developed and tested within a Koikatu Studio environment leveraging `KoikatuStudioVRPlugin v0.0.3` and the accompanying `VRGIN_KKCS.dll`.
 
-#### CharaStateX [KK][KKS]
-Allows editing the state of multiple studio characters simultaneously.  
-Normally only a few parameters such as animation speed/pattern can be edited for multiple characters at once,
-but with this you can very easily load poses, change blinking state, switch animation, change clothing state, correct joints and so on.
+### How to Install
 
-Another feature in this plugin is H animation matching.  
-By selecting a male and a female, and then clicking on an H anim in the list while holding the ctrl key, the plugin will automatically choose the right H animation based on their sex.
+1.  **Install BepInEx:** Ensure you have the latest build of [BepInEx](https://github.com/BepInEx/BepInEx/releases) installed for your game.
+2.  **Download this Plugin:** Get the latest release of *this specific RealPOV fork* from its [releases page](https://github.com/Hamakaze1s/RealPOV-VRfix/releases).
+3.  **Place Plugin DLLs:** Extract the downloaded archive and place the `RealPOV` plugin DLLs into your game's `BepInEx/plugins` folder.
 
-#### ClothingStateMenuX [KK]
-Adds options to edit chara clothing states and current outfit to the maker sidebar.  
-<sub><sup>Accessory options might come later.</sup></sub>
+### Usage
 
-#### DefaultParamEditor [KK][KKS]
-Allows editing default settings for character/scene parameters such as eye blinking or shadow density.  
-This only affects parameters that make sense to be saved.
+1.  **Enable the Plugin:** You can enable and configure the plugin using a [Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) or by editing the plugin's INI/config file directly.
+2.  **Toggle First-Person:** In Koikatu Chara Studio, press `Backspace` to switch between third-person and first-person views.
+3.  **Adjust for Clipping:** If you encounter clipping issues in first-person mode, you can try using a Configuration Manager to adjust the camera offset.
 
-To use, set your preferred settings normally and then save them with the new buttons in the studio menus.  
-Now when loading a character or starting the studio these settings will be used.
+### Known Issues
 
-#### DefaultStudioScene [KK][AI][HS2]
-Load the scene specified in the config automatically when starting studio.
+*   **Initial Head Hiding:** In some environments, the character's head may not hide correctly upon initial activation of first-person mode. Toggling POV once (pressing `Backspace` again) usually resolves this by forcing a refresh. A future update is planned where this plugin will directly control head hiding to prevent this issue.
 
-#### EyeLookEditor [KK][KKS]
-Edit the way the characters look at the camera.  
-Settings are under the maker head options.
+### Original Project & Credits
 
-#### FreeHDefaults [KK][KKS]
-Keeps freeh selection screen settings and freeh fov and aibu hand state saved.
+This plugin is a fork of the `RealPOV` plugin from the [KeelPlugins](https://github.com/IllusionMods/KeelPlugins) collection. All credit for the original work goes to its respective authors.
 
-#### ItemLayerEdit [KK][KKS][AI][HS2]
-Adds a hotkey that switches the currently selected objects layer between the character layer and the map layer.  
-This allows for more in-depth editing of lighting in studio.
+### License
 
-#### LightManager [KK][KKS]
-Make studio spotlights automatically track characters.  
-First select the lights you want to edit then add the character you want to track to the selection and hit apply in the light settings. You cannot select a character first because the light menu has to be open to edit the settings.
+Inherited from the original project. See [LICENSE](LICENSE) for details.
 
-#### LockOnPlugin [KK][KKS]
-A camera helper plugin that lets you forget the annoying camera controls and keeps the action right where it needs to be.
-Select a character and press the hotkey to automatically keep the camera focus on the character.
-In an H scene the closest character to the camera target will be selected.
+---
 
-#### MakerBridge [KK][KKS]
-Press the hotkey to send the selected character from maker to studio and vice versa.  
-To put it plainly, a temporary character card is created by the sending program which is then loaded by the receiving program when it is detected.
+<br>
+<br>
 
-#### MaterialLink [KKS]
-Automatically matches your characters skin on clothing meshes that are using the `Shader Forge/main_skin` shader (for example, thigh high socks with skindentation).
+<span id="chinese"></span>
 
-#### RealPOV [KK][KKS][PH]
-First person mode for studio and H scenes.
+## RealPOV (恋活工作室 VR修复版)
 
-#### StudioAddonLite [KK]
-A lite version of the StudioAddon from HS.  
-Currently only has the object manipulation hotkeys for studio.
+这是从 [KeelPlugins](https://github.com/IllusionMods/KeelPlugins) 项目集合中`RealPOV`插件的一个专门分支。其主要目的是在VR环境下，为**恋活工作室**提供增强的第一人称体验，目前仅实现了基础功能。
 
-#### TitleShortcuts [KK][KKS][AI][HS][HS2]
-Title menu keyboard shortcuts to open different modes.  
-For example, press F to open the female editor.
+### 功能特性
 
-## Patchers
+*   **Chara Studio VR第一人称:** 为Chara Studio VR模式添加了第一人称功能。
+*   **使用方式保持一致:** 核心使用方法与原版RealPOV插件保持相同。
+*   **默认切换键:** 默认情况下，可以通过按下`Backspace`键来切换第一人称模式。
+*   **非VR模式独立相机偏移:** 为了解决穿模问题，允许你在配置文件中设置一个与VR模式设置**独立**的相机位置偏移量。这为非VR第一人称视角提供了更大的灵活性（如果需要）。
+*   **开发环境:** 本分支是在`KoikatuStudioVRPlugin v0.0.3`及附带的`VRGIN_KKCS.dll`的恋活工作室环境下进行开发和测试的。
 
-#### UnityLogFilter [Any]
-A filter for Unity's own log messages.  
-On first run the patcher will create `UnityLogFilter.txt` in the config folder and you can add your regexes there.
+### 安装方法
+
+1.  **安装BepInEx:** 确保你的游戏已安装最新版本的[BepInEx](https://github.com/BepInEx/BepInEx/releases)。
+2.  **下载本插件:** 从本`RealPOV`分支的[发布页面](https://github.com/Hamakaze1s/RealPOV-VRfix/releases)下载最新版本。
+3.  **放置插件DLL文件:** 解压下载的压缩包，并将`RealPOV`插件的DLL文件放置到游戏的`BepInEx/plugins`文件夹内。
+
+### 使用方法
+
+1.  **启用插件:** 你可以通过[Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager)或直接编辑插件的INI/配置文件来启用和配置插件。
+2.  **切换第一人称:** 在恋活Chara Studio中，按下`Backspace`键即可在第三人称和第一人称视角之间切换。
+3.  **调整穿模问题:** 如果你在第一人称模式下遇到穿模问题，你可以尝试使用Configuration Manager调整相机偏移量。
+
+### 已知问题
+
+*   **初始头部隐藏:** 在某些环境下，首次激活第一人称模式时，角色头部可能无法正确隐藏。通常通过切换一次POV（再次按下`Backspace`）强制刷新显示即可解决此问题。未来的更新计划中，本插件将直接控制头部隐藏以彻底解决此问题。
+
+### 原项目与鸣谢
+
+本插件是[KeelPlugins](https://github.com/IllusionMods/KeelPlugins)集合中`RealPOV`插件的一个分支。所有原版工作的归功与其各自作者。
+
+### 许可证
+
+继承自原项目。详情请参阅[LICENSE](LICENSE)。

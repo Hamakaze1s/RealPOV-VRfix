@@ -1,0 +1,76 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32825.248
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Common.Core", "src\Common.Core\Common.Core.shproj", "{DD7D6945-54A6-4190-8F49-46A189EE32CD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RealPOV", "RealPOV", "{58AAB72D-86B3-4445-B25E-62D6A7FF1237}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RealPOV.Koikatu", "src\RealPOV.Koikatu\RealPOV.Koikatu.csproj", "{F6C012F1-F0BC-4B65-999D-8939DA4B2DD5}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "RealPOV.Core", "src\RealPOV.Core\RealPOV.Core.shproj", "{A52280CD-3CC4-452A-8C11-67E440E0262F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{BA55B5E5-B0FD-465F-93F2-D73BD193AC86}"
+	ProjectSection(SolutionItems) = preProject
+		src\BuildSettings.Common.props = src\BuildSettings.Common.props
+		src\BuildSettings.Koikatu.props = src\BuildSettings.Koikatu.props
+		src\SkipAllRefs.targets = src\SkipAllRefs.targets
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "repo", "repo", "{29232F8B-47DA-426C-96D0-2BB0978765E2}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		.github\workflows\ci.yaml = .github\workflows\ci.yaml
+		LICENSE = LICENSE
+		nuget.config = nuget.config
+		README.md = README.md
+		.github\workflows\release.yaml = .github\workflows\release.yaml
+	EndProjectSection
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Common.Unity", "src\Common.Unity\Common.Unity.shproj", "{50994AF9-8369-47A9-A33A-37650E4B454E}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Common.Utils", "src\Common.Utils\Common.Utils.shproj", "{AFC4EE66-2891-439A-925A-BAF22553E1BA}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Common.Harmony", "src\Common.Harmony\Common.Harmony.shproj", "{81E73402-3A7E-4ED3-B990-33C1B31FC205}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "RealPOV.Core.Koikatu", "src\RealPOV.Core.Koikatu\RealPOV.Core.Koikatu.shproj", "{5034D4DD-F7D2-45C7-893F-9955098BFF4B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F6C012F1-F0BC-4B65-999D-8939DA4B2DD5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6C012F1-F0BC-4B65-999D-8939DA4B2DD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6C012F1-F0BC-4B65-999D-8939DA4B2DD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6C012F1-F0BC-4B65-999D-8939DA4B2DD5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DD7D6945-54A6-4190-8F49-46A189EE32CD} = {BA55B5E5-B0FD-465F-93F2-D73BD193AC86}
+		{58AAB72D-86B3-4445-B25E-62D6A7FF1237} = {BA55B5E5-B0FD-465F-93F2-D73BD193AC86}
+		{F6C012F1-F0BC-4B65-999D-8939DA4B2DD5} = {58AAB72D-86B3-4445-B25E-62D6A7FF1237}
+		{A52280CD-3CC4-452A-8C11-67E440E0262F} = {58AAB72D-86B3-4445-B25E-62D6A7FF1237}
+		{50994AF9-8369-47A9-A33A-37650E4B454E} = {BA55B5E5-B0FD-465F-93F2-D73BD193AC86}
+		{AFC4EE66-2891-439A-925A-BAF22553E1BA} = {BA55B5E5-B0FD-465F-93F2-D73BD193AC86}
+		{81E73402-3A7E-4ED3-B990-33C1B31FC205} = {BA55B5E5-B0FD-465F-93F2-D73BD193AC86}
+		{5034D4DD-F7D2-45C7-893F-9955098BFF4B} = {58AAB72D-86B3-4445-B25E-62D6A7FF1237}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CECC9C6B-8041-49A1-B7FD-DC89264B7393}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		src\RealPOV.Core.Koikatu\RealPOV.Core.Koikatu.projitems*{5034d4dd-f7d2-45c7-893f-9955098bff4b}*SharedItemsImports = 13
+		src\Common.Unity\Common.Unity.projitems*{50994af9-8369-47a9-a33a-37650e4b454e}*SharedItemsImports = 13
+		src\Common.Harmony\Common.Harmony.projitems*{81e73402-3a7e-4ed3-b990-33c1b31fc205}*SharedItemsImports = 13
+		src\RealPOV.Core\RealPOV.Core.projitems*{a52280cd-3cc4-452a-8c11-67e440e0262f}*SharedItemsImports = 13
+		src\Common.Utils\Common.Utils.projitems*{afc4ee66-2891-439a-925a-baf22553e1ba}*SharedItemsImports = 13
+		src\Common.Core\Common.Core.projitems*{dd7d6945-54a6-4190-8f49-46a189ee32cd}*SharedItemsImports = 13
+		src\Common.Core\Common.Core.projitems*{f6c012f1-f0bc-4b65-999d-8939da4b2dd5}*SharedItemsImports = 5
+		src\RealPOV.Core.Koikatu\RealPOV.Core.Koikatu.projitems*{f6c012f1-f0bc-4b65-999d-8939da4b2dd5}*SharedItemsImports = 5
+		src\RealPOV.Core\RealPOV.Core.projitems*{f6c012f1-f0bc-4b65-999d-8939da4b2dd5}*SharedItemsImports = 5
+	EndGlobalSection
+EndGlobal
