@@ -7,12 +7,12 @@ using Studio;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection; 
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-using KKCharaStudioVR;
-using VRGIN.Core;
+using KKCharaStudioVR; // VR integration for Koikatsu Studio
+using VRGIN.Core; // Core VR library
 
 [assembly: System.Reflection.AssemblyVersion(RealPOV.Koikatu.RealPOV.Version)]
 
@@ -22,99 +22,107 @@ namespace RealPOV.Koikatu
     [BepInDependency(KKAPI.KoikatuAPI.GUID)]
     public class RealPOV : RealPOVCore
     {
+        // Plugin version, combines base version with build number.
         public const string Version = "1.4.1." + BuildNumber.Version;
 
+        // Configuration entries for user settings.
         private ConfigEntry<bool> HideHead { get; set; }
         private ConfigEntry<PovSex> SelectedPOV { get; set; }
 
-        private static int backupLayer;
-        private static ChaControl currentChara;
-        private static Queue<ChaControl> charaQueue;
-        private readonly bool isStudio = Paths.ProcessName == "CharaStudio";
-        private bool prevVisibleHeadAlways;
-        private HFlag hFlag;
-        private static int currentCharaId = -1;
-        private static RealPOV plugin;
+        // Static fields for camera/character state.
+        private static int backupLayer; // Original camera layer before POV activation.
+        private static ChaControl currentChara; // The character currently in POV.
+        private static Queue<ChaControl> charaQueue; // Queue of characters for non-Studio mode.
+        private readonly bool isStudio = Paths.ProcessName == "CharaStudio"; // Checks if running in Studio mode.
+        private bool prevVisibleHeadAlways; // Original head visibility setting of the character.
+        private HFlag hFlag; // Reference to HScene HFlag, for non-Studio mode.
+        private static int currentCharaId = -1; // ID of the current character in POV.
+        private static RealPOV plugin; // Reference to the plugin instance.
 
+        // Depth of field (DOF) settings backup.
         private float dofOrigSize;
         private float dofOrigAperature;
 
-        // --- Keep VRGIN.Core.VR.Active related fields for direct access ---
-        // (No change needed here from previous versions if you keep VRGIN.Core using)
-
-        // --- NEW: Reflection fields for VRGIN.Core.VR.Mode.MoveToPosition ---
-        private static Type vrginModeType; // This will be VRGIN.Modes.ControlMode (or derived)
+        // Reflection fields for VRGIN.Core.VR.Mode.MoveToPosition.
+        private static Type vrginModeType;
         private static MethodInfo vrginModeMoveToPositionMethod;
-        private static bool vrginModeReflectionInitialized = false;
+        private static bool vrginModeReflectionInitialized = false; // Flag to ensure reflection initialization runs once.
 
         protected override void Awake()
         {
             plugin = this;
-            defaultFov = 45f;
-            defaultViewOffset = 0.03f;
-            defaultVRViewOffset = 0.00f;
+            defaultFov = 45f; // Default Field of View.
+            defaultViewOffset = 0.03f; // Default camera offset for non-VR.
+            defaultVRViewOffset = 0.00f; // Default camera offset for VR.
             base.Awake();
 
+            // Bind configuration settings.
             HideHead = Config.Bind(SECTION_GENERAL, "Hide character head", false, "When entering POV, hide the character's head. Prevents accessories and hair from obstructing the view.");
             SelectedPOV = Config.Bind(SECTION_GENERAL, "Selected POV", PovSex.Male, "Choose which sex to use as your point of view.");
 
+            // Apply Harmony patches.
             Harmony.CreateAndPatchAll(typeof(Hooks));
+            // Register for Studio save/load events to persist POV data.
             StudioSaveLoadApi.RegisterExtraBehaviour<SceneDataController>(GUID);
 
+            // Scene change event handlers for HScene and character queue management.
             SceneManager.sceneLoaded += (arg0, scene) =>
             {
                 hFlag = FindObjectOfType<HFlag>();
-                charaQueue = null;
+                charaQueue = null; // Clear character queue on new scene load.
             };
-            SceneManager.sceneUnloaded += arg0 => charaQueue = null;
+            SceneManager.sceneUnloaded += arg0 => charaQueue = null; // Clear character queue on scene unload.
 
-            // Initialize VRGIN.Core.VR.Mode.MoveToPosition reflection in Awake
+            // Initialize VRGIN reflection.
             InitializeVRGINModeMoveToPositionReflection();
         }
 
+        // Checks if VR is currently active.
         protected override bool IsVREnabled()
         {
             return VR.Active;
         }
 
-        // --- NEW: Initialization for VRGIN.Core.VR.Mode.MoveToPosition ---
+        /// <summary>
+        /// Initializes reflection for VRGIN.Core.VR.Mode.MoveToPosition method.
+        /// This allows dynamic access to VR camera positioning without direct assembly reference.
+        /// </summary>
         private static void InitializeVRGINModeMoveToPositionReflection()
         {
             if (vrginModeReflectionInitialized) return;
 
             try
             {
-                // We directly access VR.Mode, which is an instance of ControlMode (or its derived class).
-                // We need to get the actual Type of VR.Mode at runtime.
-                // However, the MoveToPosition method is defined on the base ControlMode class.
-                // So we can directly get the method from VRGIN.Modes.ControlMode.
+                // Get VRGIN_KKCS assembly, which contains VRGIN.Modes.ControlMode.
                 Assembly vrginAssembly = AppDomain.CurrentDomain.GetAssemblies()
-                    .FirstOrDefault(a => a.GetName().Name == "VRGIN_KKCS"); // Use VRGIN_KKCS for VRGIN types
+                    .FirstOrDefault(a => a.GetName().Name == "VRGIN_KKCS");
 
                 if (vrginAssembly == null)
                 {
-                    plugin.Logger.LogWarning("VRGIN_KKCS.dll assembly not found. Cannot use VRGIN.Core.VR.Mode.MoveToPosition.");
+                    plugin.Logger.LogWarning("VRGIN_KKCS.dll assembly not found. VRGIN.Core.VR.Mode.MoveToPosition cannot be used.");
                     return;
                 }
 
-                vrginModeType = vrginAssembly.GetType("VRGIN.Modes.ControlMode"); // Get the base ControlMode type
+                // Get the base ControlMode type.
+                vrginModeType = vrginAssembly.GetType("VRGIN.Modes.ControlMode");
                 if (vrginModeType == null)
                 {
-                    plugin.Logger.LogWarning("VRGIN.Modes.ControlMode type not found. Cannot use VRGIN.Core.VR.Mode.MoveToPosition.");
+                    plugin.Logger.LogWarning("VRGIN.Modes.ControlMode type not found. VRGIN.Core.VR.Mode.MoveToPosition cannot be used.");
                     return;
                 }
 
-                // Get the MoveToPosition method: public virtual void MoveToPosition(Vector3 targetPosition, Quaternion rotation = default(Quaternion), bool ignoreHeight = true)
-                // We want to pass ignoreHeight = false, to allow full control over Y position.
+                // Get the MoveToPosition method with specific parameters (Vector3 targetPosition, bool ignoreHeight).
+                // We choose the overload that allows ignoring height, to get full control over Y position.
                 vrginModeMoveToPositionMethod = vrginModeType.GetMethod("MoveToPosition", BindingFlags.Public | BindingFlags.Instance, null,
-                    new Type[] { typeof(Vector3), typeof(Quaternion), typeof(bool) }, null);
+                    new Type[] { typeof(Vector3), typeof(bool) }, null);
 
+                // Fallback: try method with 3 parameters (Vector3, Quaternion, bool), and only pass position and ignoreHeight.
+                // This is less ideal but might work if the 2-param overload isn't found.
                 if (vrginModeMoveToPositionMethod == null)
                 {
-                    plugin.Logger.LogWarning("VRGIN.Modes.ControlMode.MoveToPosition method not found or signature mismatch. Cannot use VRGIN.Core.VR.Mode.MoveToPosition.");
-                    // Try with 2 args (if default(Quaternion) and ignoreHeight were params)
+                    plugin.Logger.LogWarning("VRGIN.Modes.ControlMode.MoveToPosition(Vector3, bool) method not found. Attempting (Vector3, Quaternion, bool).");
                     vrginModeMoveToPositionMethod = vrginModeType.GetMethod("MoveToPosition", BindingFlags.Public | BindingFlags.Instance, null,
-                        new Type[] { typeof(Vector3), typeof(Quaternion) }, null);
+                        new Type[] { typeof(Vector3), typeof(Quaternion), typeof(bool) }, null);
                     if (vrginModeMoveToPositionMethod == null)
                     {
                         plugin.Logger.LogWarning("VRGIN.Modes.ControlMode.MoveToPosition method with 2 or 3 args not found. Giving up.");
@@ -124,7 +132,6 @@ namespace RealPOV.Koikatu
 
                 vrginModeReflectionInitialized = true;
                 plugin.Logger.LogMessage("Successfully initialized VRGIN.Core.VR.Mode.MoveToPosition reflection.");
-
             }
             catch (Exception ex)
             {
@@ -132,7 +139,10 @@ namespace RealPOV.Koikatu
             }
         }
 
-
+        /// <summary>
+        /// Enables POV mode based on saved scene data.
+        /// </summary>
+        /// <param name="povData">Scene POV data to apply.</param>
         public static void EnablePov(ScenePovData povData)
         {
             if (Studio.Studio.Instance.dicObjectCtrl.TryGetValue(povData.CharaId, out var chara))
@@ -142,29 +152,40 @@ namespace RealPOV.Koikatu
                 currentCharaGo = currentChara.gameObject;
                 LookRotation[currentCharaGo] = povData.Rotation;
                 CurrentFOV = povData.Fov;
-                plugin.EnablePov();
+                plugin.EnablePov(); // Call the instance method to apply POV.
                 plugin.prevVisibleHeadAlways = povData.CharaPrevVisibleHeadAlways;
             }
         }
 
+        /// <summary>
+        /// Retrieves current POV data for saving.
+        /// </summary>
+        /// <returns>A ScenePovData object containing current POV settings.</returns>
         public static ScenePovData GetPovData()
         {
             return new ScenePovData
             {
                 CharaId = currentCharaId,
                 CharaPrevVisibleHeadAlways = plugin.prevVisibleHeadAlways,
-                Fov = CurrentFOV != null ? CurrentFOV.Value : defaultFov,
-                Rotation = currentCharaGo != null ? LookRotation[currentCharaGo] : new Vector3(0, 0, 0)
+                Fov = CurrentFOV ?? defaultFov, // Use CurrentFOV if set, otherwise default.
+                Rotation = currentCharaGo != null ? LookRotation[currentCharaGo] : Vector3.zero // Use saved rotation or zero.
             };
         }
 
+        /// <summary>
+        /// Core logic to enable Point of View mode.
+        /// Handles character selection, head visibility, camera control, and VR integration.
+        /// </summary>
         protected override void EnablePov()
         {
-            if (!currentChara)
+            if (!currentChara) // If no character is selected for POV.
             {
-                if (isStudio)
+                if (isStudio) // Studio mode: select first active character.
                 {
-                    var selectedCharas = GuideObjectManager.Instance.selectObjectKey.Select(x => Studio.Studio.GetCtrlInfo(x) as OCIChar).Where(x => x != null).ToList();
+                    var selectedCharas = GuideObjectManager.Instance.selectObjectKey
+                        .Select(x => Studio.Studio.GetCtrlInfo(x) as OCIChar)
+                        .Where(x => x != null)
+                        .ToList();
                     if (selectedCharas.Count > 0)
                     {
                         var ociChar = selectedCharas.First();
@@ -174,17 +195,18 @@ namespace RealPOV.Koikatu
                     }
                     else
                     {
-                        Logger.LogMessage("Select a character in workspace to enter its POV");
+                        Logger.LogMessage("Select a character in workspace to enter its POV.");
                     }
                 }
-                else // NON-STUDIO (Main game)
+                else // Non-Studio (Main game) mode: queue and find character.
                 {
                     if (charaQueue == null)
                         charaQueue = new Queue<ChaControl>(FindObjectsOfType<ChaControl>());
 
-                    currentChara = GetCurrentChara();
+                    currentChara = GetCurrentChara(); // Try to get character from queue.
                     if (!currentChara)
                     {
+                        // If no character found, refresh queue and try again.
                         charaQueue = new Queue<ChaControl>(FindObjectsOfType<ChaControl>());
                         currentChara = GetCurrentChara();
                     }
@@ -193,16 +215,17 @@ namespace RealPOV.Koikatu
                     if (currentChara)
                         currentCharaGo = currentChara.gameObject;
                     else
-                        Log.Message("Can't enter POV: Could not find any valid characters (Non-Studio)");
+                        Log.Message("Can't enter POV: Could not find any valid characters (Non-Studio).");
                 }
             }
 
-            if (currentChara)
+            if (currentChara) // If a character is successfully selected.
             {
-                prevVisibleHeadAlways = currentChara.fileStatus.visibleHeadAlways;
+                prevVisibleHeadAlways = currentChara.fileStatus.visibleHeadAlways; // Backup original head visibility.
 
-                if (IsVREnabled() && isStudio)
+                if (IsVREnabled() && isStudio) // VR enabled in Studio mode.
                 {
+                    // Attempt to hide character head using TransientHead component for VR integration.
                     TransientHead transientHead = currentChara.gameObject.GetComponent<TransientHead>();
                     if (transientHead != null)
                     {
@@ -211,27 +234,29 @@ namespace RealPOV.Koikatu
                     }
                     else
                     {
-                        plugin.Logger.LogWarning("RealPOV: TransientHead component not found on character. Cannot hide head via Studio VR plugin.");
+                        plugin.Logger.LogWarning("RealPOV: TransientHead component not found on character. Cannot hide head via Studio VR plugin. Falling back to default.");
                         if (HideHead.Value) currentChara.fileStatus.visibleHeadAlways = false;
                     }
                 }
-                else if (!IsVREnabled())
+                else if (!IsVREnabled()) // Non-VR mode.
                 {
                     if (HideHead.Value) currentChara.fileStatus.visibleHeadAlways = false;
                 }
-                else
+                else // VR enabled in Non-Studio mode.
                 {
-                    Logger.LogMessage("RealPOV: VR enabled (Non-Studio). Not hiding character head; VR plugin handles this (or not handled by RealPOV).");
+                    Logger.LogMessage("RealPOV: VR enabled (Non-Studio). Not hiding character head; VR plugin usually handles this.");
                 }
 
-                GameCamera = Camera.main;
+                GameCamera = Camera.main; // Get the main game camera.
 
-                if (!IsVREnabled())
+                if (!IsVREnabled()) // Non-VR specific camera adjustments.
                 {
+                    // Disable default camera controls.
                     var cc = (MonoBehaviour)GameCamera.GetComponent<CameraControl_Ver2>();
                     if (!cc) cc = GameCamera.GetComponent<Studio.CameraControl>();
                     if (cc) cc.enabled = false;
 
+                    // Adjust Depth of Field (DOF) for POV effect.
                     var depthOfField = GameCamera.GetComponent<UnityStandardAssets.ImageEffects.DepthOfField>();
                     if (depthOfField != null && depthOfField.enabled)
                     {
@@ -243,15 +268,16 @@ namespace RealPOV.Koikatu
                     }
                 }
 
+                // Initialize or retrieve POV look rotation.
                 if (!LookRotation.TryGetValue(currentCharaGo, out _))
                     LookRotation[currentCharaGo] = currentChara.objHeadBone.transform.rotation.eulerAngles;
 
-                base.EnablePov();
+                base.EnablePov(); // Call base class's EnablePov.
 
-                if (!IsVREnabled())
+                if (!IsVREnabled()) // Non-VR specific camera layer adjustment.
                 {
                     backupLayer = GameCamera.gameObject.layer;
-                    GameCamera.gameObject.layer = 0;
+                    GameCamera.gameObject.layer = 0; // Set camera layer to avoid rendering issues.
                 }
                 else
                 {
@@ -260,33 +286,44 @@ namespace RealPOV.Koikatu
             }
         }
 
+        /// <summary>
+        /// Retrieves a suitable character for POV in non-Studio mode from the queue.
+        /// Filters by sex preference and activity.
+        /// </summary>
+        /// <returns>A suitable ChaControl object, or null if none found.</returns>
         private ChaControl GetCurrentChara()
         {
             for (int i = 0; i < charaQueue.Count; i++)
             {
                 var chaControl = charaQueue.Dequeue();
 
-                if (!chaControl)
-                    continue;
+                if (!chaControl) continue;
 
-                charaQueue.Enqueue(chaControl);
+                charaQueue.Enqueue(chaControl); // Re-add to end of queue for next cycle.
 
+                // Skip male characters in certain H-scene modes, unless specifically allowed by POV sex setting.
                 if (chaControl.sex == 0 && hFlag && (hFlag.mode == HFlag.EMode.aibu || hFlag.mode == HFlag.EMode.lesbian || hFlag.mode == HFlag.EMode.masturbation))
                     continue;
+                // Filter by selected POV sex.
                 if (SelectedPOV.Value != PovSex.Either && chaControl.sex != (int)SelectedPOV.Value)
                     continue;
+                // Ensure character is active in hierarchy.
                 if (chaControl.objTop.activeInHierarchy)
                     return chaControl;
             }
             return null;
         }
 
+        /// <summary>
+        /// Disables POV mode and restores original camera and character settings.
+        /// </summary>
         protected override void DisablePov()
         {
             if (currentChara != null)
             {
-                if (IsVREnabled() && isStudio)
+                if (IsVREnabled() && isStudio) // VR enabled in Studio mode.
                 {
+                    // Restore character head visibility via TransientHead.
                     TransientHead transientHead = currentChara.gameObject.GetComponent<TransientHead>();
                     if (transientHead != null)
                     {
@@ -295,27 +332,29 @@ namespace RealPOV.Koikatu
                     }
                     else
                     {
-                        plugin.Logger.LogWarning("RealPOV: TransientHead component not found on character. Cannot restore head via Studio VR plugin.");
+                        plugin.Logger.LogWarning("RealPOV: TransientHead component not found on character. Cannot restore head via Studio VR plugin. Falling back to default.");
                         currentChara.fileStatus.visibleHeadAlways = prevVisibleHeadAlways;
                     }
                 }
-                else
+                else // Non-VR or Non-Studio VR mode.
                 {
-                    currentChara.fileStatus.visibleHeadAlways = prevVisibleHeadAlways;
+                    currentChara.fileStatus.visibleHeadAlways = prevVisibleHeadAlways; // Restore original head visibility.
                 }
             }
 
-            currentChara = null;
-            currentCharaId = -1;
+            currentChara = null; // Clear current character reference.
+            currentCharaId = -1; // Reset character ID.
 
             if (GameCamera != null)
             {
-                if (!IsVREnabled())
+                if (!IsVREnabled()) // Non-VR specific camera restoration.
                 {
+                    // Re-enable default camera controls.
                     var cc = (MonoBehaviour)GameCamera.GetComponent<CameraControl_Ver2>();
                     if (!cc) cc = GameCamera.GetComponent<Studio.CameraControl>();
                     if (cc) cc.enabled = true;
 
+                    // Restore Depth of Field settings.
                     var depthOfField = GameCamera.GetComponent<UnityStandardAssets.ImageEffects.DepthOfField>();
                     if (depthOfField != null && depthOfField.enabled)
                     {
@@ -329,9 +368,9 @@ namespace RealPOV.Koikatu
                 }
             }
 
-            base.DisablePov();
+            base.DisablePov(); // Call base class's DisablePov.
 
-            if (GameCamera != null && !IsVREnabled())
+            if (GameCamera != null && !IsVREnabled()) // Non-VR specific camera layer restoration.
             {
                 GameCamera.gameObject.layer = backupLayer;
             }
@@ -341,15 +380,23 @@ namespace RealPOV.Koikatu
             }
         }
 
+        /// <summary>
+        /// Harmony patches for camera and animation control.
+        /// </summary>
         private class Hooks
         {
+            /// <summary>
+            /// Prefix patch for NeckLookControllerVer2.LateUpdate to control camera position and rotation.
+            /// Prevents original neck look logic from running when POV is active.
+            /// Integrates with VRGIN for VR camera movement.
+            /// </summary>
             [HarmonyPrefix, HarmonyPatch(typeof(NeckLookControllerVer2), nameof(NeckLookControllerVer2.LateUpdate)), HarmonyWrapSafe]
             private static bool ApplyRotation(NeckLookControllerVer2 __instance)
             {
                 if (plugin == null) return true;
 
-                // If in main game mode AND VR is enabled, let original game logic run.
-                // This plugin is now designed specifically for Studio VR mode.
+                // In main game mode with VR enabled, let original game logic run.
+                // This plugin's VR integration is primarily for Studio mode.
                 if (!plugin.isStudio && plugin.IsVREnabled())
                 {
                     plugin.Logger.LogDebug("RealPOV: Not in Studio mode and VR enabled. Bypassing POV camera logic.");
@@ -360,10 +407,11 @@ namespace RealPOV.Koikatu
                 {
                     if (!currentChara)
                     {
-                        plugin.DisablePov();
+                        plugin.DisablePov(); // Disable POV if character is no longer valid.
                         return true;
                     }
 
+                    // Retrieve or initialize camera look rotation.
                     Vector3 rot;
                     if (LookRotation.TryGetValue(currentCharaGo, out var val))
                         rot = val;
@@ -372,45 +420,54 @@ namespace RealPOV.Koikatu
 
                     if (__instance.neckLookScript && currentChara.neckLookCtrl == __instance)
                     {
+                        // Reset neck bone rotations to avoid conflicts.
                         __instance.neckLookScript.aBones[0].neckBone.rotation = Quaternion.identity;
                         __instance.neckLookScript.aBones[1].neckBone.rotation = Quaternion.identity;
-                        __instance.neckLookScript.aBones[1].neckBone.Rotate(rot);
+                        __instance.neckLookScript.aBones[1].neckBone.Rotate(rot); // Apply custom rotation to neck bone.
 
                         var eyeObjs = currentChara.eyeLookCtrl.eyeLookScript.eyeObjs;
                         var headBoneTransform = currentChara.objHeadBone.transform;
 
+                        // Calculate average eye position.
                         var eyePosition = Vector3.Lerp(eyeObjs[0].eyeTransform.position, eyeObjs[1].eyeTransform.position, 0.5f);
 
-                        if (plugin.IsVREnabled())
+                        if (plugin.IsVREnabled()) // VR camera positioning.
                         {
+                            // Calculate target position for VR camera.
                             Vector3 targetPosition = eyePosition + headBoneTransform.forward * VRViewOffset.Value;
-                            // Quaternion targetRotation = headBoneTransform.rotation; // Still use character's head rotation as target
-                            Quaternion targetRotation = VR.Camera.Head.rotation;
-                            // NEW: Call VRGIN.Core.VR.Mode.MoveToPosition directly
-                            // VR.Mode is an instance of ControlMode (or derived, like StandingMode).
-                            // It has a MoveToPosition method defined in ControlMode.
-                            // We need to pass ignoreHeight = false to allow full control of Y position.
-                            // The VRGIN.Core.VR.Mode.MoveToPosition will handle the HMD rotation relative to origin.
-                            if (VR.Mode != null)
+
+                            if (VR.Mode != null && vrginModeMoveToPositionMethod != null)
                             {
-                                // We are targeting a specific position and rotation (character's head).
-                                // ignoreHeight: false means the origin will be moved so the head is EXACTLY at targetPosition.
-                                // VR.Mode.MoveToPosition(targetPosition, targetRotation, false);
-                                VR.Mode.MoveToPosition(targetPosition,false);
-                                plugin.Logger.LogDebug($"RealPOV: Moved VR Camera to {targetPosition} with rotation {targetRotation.eulerAngles}");
+                                // Call VRGIN.Core.VR.Mode.MoveToPosition via reflection.
+                                // This moves the VR play space so that the HMD is at targetPosition.
+                                // ignoreHeight = false ensures full control over Y position.
+                                if (vrginModeMoveToPositionMethod.GetParameters().Length == 3)
+                                {
+                                    // If method is MoveToPosition(Vector3, Quaternion, bool)
+                                    vrginModeMoveToPositionMethod.Invoke(VR.Mode, new object[] { targetPosition, Quaternion.identity, false });
+                                }
+                                else if (vrginModeMoveToPositionMethod.GetParameters().Length == 2)
+                                {
+                                    // If method is MoveToPosition(Vector3, bool)
+                                    vrginModeMoveToPositionMethod.Invoke(VR.Mode, new object[] { targetPosition, false });
+                                }
+
+                                plugin.Logger.LogDebug($"RealPOV: Moved VR Camera to {targetPosition}");
                             }
                             else
                             {
-                                plugin.Logger.LogWarning("VRGIN.Core.VR.Mode is null. Cannot move VR camera.");
+                                plugin.Logger.LogWarning("VRGIN.Core.VR.Mode or MoveToPosition method is null. Cannot move VR camera.");
                             }
 
-                            CurrentFOV = null;
+                            CurrentFOV = null; // Let VRGIN handle FOV.
                         }
-                        else
+                        else // Non-VR camera positioning.
                         {
+                            // Set camera position and rotation based on head bone.
                             GameCamera.transform.SetPositionAndRotation(eyePosition, headBoneTransform.rotation);
-                            GameCamera.transform.Translate(Vector3.forward * ViewOffset.Value);
+                            GameCamera.transform.Translate(Vector3.forward * ViewOffset.Value); // Apply view offset.
 
+                            // Set FOV.
                             if (CurrentFOV == null)
                             {
                                 CurrentFOV = DefaultFOV.Value;
@@ -418,13 +475,17 @@ namespace RealPOV.Koikatu
                             GameCamera.fieldOfView = CurrentFOV.Value;
                         }
 
-                        return false;
+                        return false; // Prevent original LateUpdate from running.
                     }
                 }
 
-                return true;
+                return true; // Allow original LateUpdate to run if POV is not enabled or conditions not met.
             }
 
+            /// <summary>
+            /// Postfix patches to reset all POV rotations when H-scene animations change.
+            /// Ensures fresh rotation data for new animations.
+            /// </summary>
             [HarmonyPostfix]
             [HarmonyPatch(typeof(HSceneProc), "ChangeAnimator")]
             [HarmonyPatch(typeof(HFlag), nameof(HFlag.selectAnimationListInfo), MethodType.Setter)]
@@ -434,6 +495,9 @@ namespace RealPOV.Koikatu
             }
         }
 
+        /// <summary>
+        /// Enum for selecting point of view character sex.
+        /// </summary>
         private enum PovSex
         {
             Male,
