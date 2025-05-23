@@ -2,7 +2,7 @@
 
 ## RealPOV (恋活工作室 VR修复版)
 
-这是从 [KeelPlugins](https://github.com/IllusionMods/KeelPlugins) 项目集合中`RealPOV`插件的一个专门分支。其主要目的是在VR环境下，为**恋活工作室**提供增强的第一人称体验，目前仅实现了基础功能。
+这是从 [KeelPlugins](https://github.com/IllusionMods/KeelPlugins) 项目集合中`RealPOV`插件的一个专门分支。其主要目的是在VR环境下，为**恋活工作室**提供增强的第一人称体验，目前仅实现了基础功能。目标是成为最好的恋活工作室VR第一人称插件。
 
 ### 功能特性
 

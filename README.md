@@ -7,7 +7,7 @@
 
 ## RealPOV (Koikatu Studio VR Fix Fork)
 
-This is a specialized fork of the `RealPOV` plugin from the [KeelPlugins](https://github.com/IllusionMods/KeelPlugins) collection. Its primary purpose is to enhance the first-person experience in a VR environment for **Koikatu Studio**. Currently, only basic functionality is implemented.
+This is a specialized fork of the `RealPOV` plugin from the [KeelPlugins](https://github.com/IllusionMods/KeelPlugins) collection. Its primary purpose is to enhance the first-person experience in a VR environment for **Koikatu Studio**. Currently, only basic functionality is implemented. Its goal is to become the best VR POV plugin for Koikatu Chara Studio. 
 
 ### Features
 
